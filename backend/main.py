@@ -23,6 +23,8 @@ app.add_middleware(
         "http://127.0.0.1:5174",
         "http://localhost:4173",
         "http://127.0.0.1:4173",
+        "https://safe-intelli-ai.vercel.app",
+        "https://safe-intelli-ai-git-main-kuna-rithikas-projects.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
