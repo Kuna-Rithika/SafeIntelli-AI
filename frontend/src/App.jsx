@@ -7,11 +7,15 @@ import {
 } from "lucide-react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
-const API_URL = "http://localhost:8000";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const fallbackZones = [
   { zone_id: "A", zone_name: "Boiler Deck", safety_score: 88, risk_level: "Safe", factor_risks: { gas: 18, permit: 4, activity: 28, equipment: 8, workers: 16 }, weights: { gas: .3, permit: .2, activity: .15, equipment: .25, workers: .1 }, compound_factors: [], explanation: "Demo mode: this zone is operating within normal limits.", recommendation: "Continue routine checks.", risk_reduction: 18, incident_report: "" },
-  { zone_id: "B", zone_name: "Coke Oven Bay", safety_score: 63, risk_level: "Watch", factor_risks: { gas: 55, permit: 82, activity: 48, equipment: 46, workers: 25 }, weights: { gas: .3, permit: .2, activity: .15, equipment: .25, workers: .1 }, compound_factors: ["active hot-work permit", "gas concentration rising near threshold"], explanation: "Demo mode: two safety signals need attention.", recommendation: "Review the hot-work permit and gas readings.", risk_reduction: 35, incident_report: "" }
+  { zone_id: "B", zone_name: "Coke Oven Bay", safety_score: 63, risk_level: "Watch", factor_risks: { gas: 55, permit: 82, activity: 48, equipment: 46, workers: 25 }, weights: { gas: .3, permit: .2, activity: .15, equipment: .25, workers: .1 }, compound_factors: ["active hot-work permit", "gas concentration rising near threshold"], explanation: "Demo mode: two safety signals need attention.", recommendation: "Review the hot-work permit and gas readings.", risk_reduction: 35, incident_report: "" },
+  { zone_id: "C", zone_name: "Compressor Hall", safety_score: 74, risk_level: "Safe", factor_risks: { gas: 27, permit: 6, activity: 34, equipment: 22, workers: 18 }, weights: { gas: .3, permit: .2, activity: .15, equipment: .25, workers: .1 }, compound_factors: [], explanation: "Demo mode: this zone is steady and within normal limits.", recommendation: "Maintain routine monitoring.", risk_reduction: 12, incident_report: "" },
+  { zone_id: "D", zone_name: "Storage Yard", safety_score: 69, risk_level: "Watch", factor_risks: { gas: 41, permit: 12, activity: 36, equipment: 44, workers: 28 }, weights: { gas: .3, permit: .2, activity: .15, equipment: .25, workers: .1 }, compound_factors: ["equipment maintenance is overdue"], explanation: "Demo mode: storage operations need closer oversight.", recommendation: "Inspect the equipment and verify the staging area.", risk_reduction: 24, incident_report: "" },
+  { zone_id: "E", zone_name: "Control Annex", safety_score: 81, risk_level: "Safe", factor_risks: { gas: 16, permit: 3, activity: 24, equipment: 12, workers: 14 }, weights: { gas: .3, permit: .2, activity: .15, equipment: .25, workers: .1 }, compound_factors: [], explanation: "Demo mode: the control area is operating normally.", recommendation: "Keep normal controls in place.", risk_reduction: 10, incident_report: "" },
+  { zone_id: "F", zone_name: "Loading Gantry", safety_score: 57, risk_level: "Watch", factor_risks: { gas: 62, permit: 8, activity: 49, equipment: 38, workers: 46 }, weights: { gas: .3, permit: .2, activity: .15, equipment: .25, workers: .1 }, compound_factors: ["worker exposure is increasing near the loading line"], explanation: "Demo mode: loading operations should be monitored closely.", recommendation: "Review the loading sequence and worker positioning.", risk_reduction: 28, incident_report: "" }
 ];
 
 const signalCards = [
@@ -237,10 +241,170 @@ function HowItWorks({ onMonitor }) {
 }
 
 function LegacyMonitor({ zones, selected, selectedId, setSelectedId, criticalZone, averageScore, factors, timeline, playing, setPlaying, simulationStep, advance, reset, alarmArmed, toggleAlarm, exportReport, reportText }) {
-  // Show only readings that have occurred in the current demo, not future data.
-  timeline = timeline.filter((point) => point.step <= simulationStep);
-  return <main className="page-main monitor"><section className="monitor-heading"><div><span className="section-kicker">Live safety monitor</span><h1>What needs attention right now?</h1><p>Choose a zone below. We will show its safety picture, why it has that status, and the next best action.</p></div><div className="monitor-actions"><button className={`alarm-button ${alarmArmed ? "armed" : ""}`} onClick={toggleAlarm}><AlarmClock size={17} /> {alarmArmed ? "Emergency alerts on" : "Enable emergency alerts"}</button><button className="button secondary compact" onClick={reset}><RefreshCcw size={16} /> Restart demo</button></div></section><section className={`alert-banner ${criticalZone ? "critical" : "safe"}`}><div>{criticalZone ? <CircleAlert size={25} /> : <ShieldCheck size={25} />}</div><div><span>{criticalZone ? "Critical situation detected" : "Facility operating normally"}</span><strong>{criticalZone ? `${criticalZone.zone_name} needs immediate action. Open it to understand why.` : "No zones require immediate action."}</strong></div>{criticalZone && <button onClick={() => setSelectedId(criticalZone.zone_id)}>View critical zone <ArrowRight size={16} /></button>}</section><section className="scenario-guide"><div className="scenario-intro"><span className="section-kicker">Guided safety story · Stage {simulationStep + 1}</span><h2>{playing ? "The scenario is running" : "Watch the safety risk build"}</h2><p>{playing ? `Every 1.6 seconds the demo moves to the next moment. Watch ${selected.zone_name}: safe conditions may shift into a warning and then a compound critical risk.` : "Start the guided scenario to automatically move through the demo stages. Or use “Move one stage” to explain it at your own pace."}</p></div><div className="scenario-actions"><button className="button primary" onClick={() => setPlaying((value) => !value)}>{playing ? <Pause size={17} /> : <Play size={17} />}{playing ? "Pause story" : "Start guided scenario"}</button><button className="button secondary compact" onClick={advance}><ChevronRight size={16} /> Move one stage</button></div></section><section className="zone-section"><div className="section-title-row"><div><span className="section-kicker">Choose an area</span><h2>{zones.length} zones being monitored</h2></div><span className="average-chip"><Gauge size={16} /> Facility score {averageScore}</span></div><div className="zone-grid">{zones.map((zone) => <button key={zone.zone_id} className={`zone-tile ${levelClass(zone.risk_level)} ${zone.zone_id === selectedId ? "selected" : ""}`} onClick={() => setSelectedId(zone.zone_id)}><span className="zone-id">Zone {zone.zone_id}</span><strong>{zone.zone_name}</strong><div><span className="zone-state">{zone.risk_level}</span><b>{zone.safety_score}</b></div></button>)}</div></section><section className="focus-grid"><article className="focus-card"><div className="focus-title"><div><span className="section-kicker">Selected area</span><h2><MapPin size={20} /> {selected.zone_name}</h2></div><span className={`status-tag ${levelClass(selected.risk_level)}`}>{selected.risk_level}</span></div><div className="score-hero"><div><span>Safety score</span><strong>{selected.safety_score}<small>/100</small></strong></div><p>{riskText(selected.safety_score)}<br /><small>Higher safety score = safer zone</small></p></div><p className="plain-explanation">{selected.explanation}</p><h3>What is influencing this score?</h3><div className="factor-stack">{factors.map(({ key, value, weight }) => <div className="factor" key={key}><div><span>{signalCards.find((item) => item.key === key)?.label || key}</span><small>{weight}% influence</small></div><div className="risk-meter"><i style={{ width: `${value}%` }} /></div><b>{value}</b></div>)}</div></article><article className="action-card"><div className="focus-title"><div><span className="section-kicker">Recommended next step</span><h2><ShieldAlert size={20} /> Make the safe choice</h2></div></div><p>{selected.recommendation}</p><div className="action-check"><CheckCircle2 size={18} /> {selected.risk_level === "Critical" ? "Escalate to the shift safety officer now." : "Keep monitoring; act if the status changes."}</div><button className="button primary full" onClick={exportReport}><Download size={17} /> Download safety report</button><small className="report-note">Downloads a report for {selected.zone_name}, including its current readings and recommended action.</small></article></section><section className="timeline-card"><div><span className="section-kicker">What happened over time?</span><h2>Safety trend for {selected.zone_name}</h2><p>The orange line is safety score: when it falls, the zone is becoming less safe. The other lines show the risk signals that caused it.</p></div><ResponsiveContainer width="100%" height={310}><LineChart data={timeline}><CartesianGrid strokeDasharray="3 3" stroke="var(--grid)" /><XAxis dataKey="step" stroke="var(--muted)" /><YAxis domain={[0, 100]} stroke="var(--muted)" /><Tooltip contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12 }} /><Legend /><Line type="monotone" name="Safety score" dataKey="safety_score" stroke="var(--accent)" strokeWidth={3} dot={false} /><Line type="monotone" name="Gas risk" dataKey="gas" stroke="#ff7760" strokeWidth={2} dot={false} /><Line type="monotone" name="Equipment risk" dataKey="equipment" stroke="#b79aff" strokeWidth={2} dot={false} /><Line type="monotone" name="Worker exposure" dataKey="workers" stroke="#41c9c3" strokeWidth={2} dot={false} /></LineChart></ResponsiveContainer></section></main>;
+  const factorRows = Array.isArray(factors) ? factors : [];
+
+  return (
+    <main className="page-main monitor">
+      <section className="monitor-heading">
+        <div>
+          <span className="section-kicker">Live safety monitor</span>
+          <h1>What needs attention right now?</h1>
+          <p>Choose a zone below. We will show its safety picture, why it has that status, and the next best action.</p>
+        </div>
+        <div className="monitor-actions">
+          <button className={`alarm-button ${alarmArmed ? "armed" : ""}`} onClick={toggleAlarm}>
+            <AlarmClock size={17} /> {alarmArmed ? "Emergency alerts on" : "Enable emergency alerts"}
+          </button>
+          <button className="button secondary compact" onClick={reset}>
+            <RefreshCcw size={16} /> Restart demo
+          </button>
+        </div>
+      </section>
+
+      <section className={`alert-banner ${criticalZone ? "critical" : "safe"}`}>
+        <div>{criticalZone ? <CircleAlert size={25} /> : <ShieldCheck size={25} />}</div>
+        <div>
+          <span>{criticalZone ? "Critical situation detected" : "Facility operating normally"}</span>
+          <strong>{criticalZone ? `${criticalZone.zone_name} needs immediate action. Open it to understand why.` : "No zones require immediate action."}</strong>
+        </div>
+        {criticalZone && (
+          <button onClick={() => setSelectedId(criticalZone.zone_id)}>
+            View critical zone <ArrowRight size={16} />
+          </button>
+        )}
+      </section>
+
+      <section className="scenario-guide">
+        <div className="scenario-intro">
+          <span className="section-kicker">Guided safety story · Stage {simulationStep + 1}</span>
+          <h2>{playing ? "The scenario is running" : "Watch the safety risk build"}</h2>
+          <p>
+            {playing
+              ? `Every 1.6 seconds the demo moves to the next moment. Watch ${selected.zone_name}: safe conditions may shift into a warning and then a compound critical risk.`
+              : "Start the guided scenario to automatically move through the demo stages. Or use “Move one stage” to explain it at your own pace."}
+          </p>
+        </div>
+        <div className="scenario-actions">
+          <button className="button primary" onClick={() => setPlaying((value) => !value)}>
+            {playing ? <Pause size={17} /> : <Play size={17} />}
+            {playing ? "Pause story" : "Start guided scenario"}
+          </button>
+          <button className="button secondary compact" onClick={advance}>
+            <ChevronRight size={16} /> Move one stage
+          </button>
+        </div>
+      </section>
+
+      <section className="zone-section">
+        <div className="section-title-row">
+          <div>
+            <span className="section-kicker">Choose an area</span>
+            <h2>{zones.length} zones being monitored</h2>
+          </div>
+          <span className="average-chip">
+            <Gauge size={16} /> Facility score {averageScore}
+          </span>
+        </div>
+        <div className="zone-grid">
+          {zones.map((zone) => (
+            <button
+              key={zone.zone_id}
+              className={`zone-tile ${levelClass(zone.risk_level)} ${zone.zone_id === selectedId ? "selected" : ""}`}
+              onClick={() => setSelectedId(zone.zone_id)}
+            >
+              <span className="zone-id">Zone {zone.zone_id}</span>
+              <strong>{zone.zone_name}</strong>
+              <div>
+                <span className="zone-state">{zone.risk_level}</span>
+                <b>{zone.safety_score}</b>
+              </div>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="focus-grid">
+        <article className="focus-card">
+          <div className="focus-title">
+            <div>
+              <span className="section-kicker">Selected area</span>
+              <h2><MapPin size={20} /> {selected.zone_name}</h2>
+            </div>
+            <span className={`status-tag ${levelClass(selected.risk_level)}`}>{selected.risk_level}</span>
+          </div>
+          <div className="score-hero">
+            <div>
+              <span>Safety score</span>
+              <strong>{selected.safety_score}<small>/100</small></strong>
+            </div>
+            <p>
+              {riskText(selected.safety_score)}
+              <br />
+              <small>Higher safety score = safer zone</small>
+            </p>
+          </div>
+          <p className="plain-explanation">{selected.explanation}</p>
+          <h3>What is influencing this score?</h3>
+          <div className="factor-stack">
+            {factorRows.map(({ key, value, weight }) => (
+              <div className="factor" key={key}>
+                <div>
+                  <span>{signalCards.find((item) => item.key === key)?.label || key}</span>
+                  <small>{weight}% influence</small>
+                </div>
+                <div className="risk-meter"><i style={{ width: `${value}%` }} /></div>
+                <b>{value}</b>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="action-card">
+          <div className="focus-title">
+            <div>
+              <span className="section-kicker">Recommended next step</span>
+              <h2><ShieldAlert size={20} /> Make the safe choice</h2>
+            </div>
+          </div>
+          <p>{selected.recommendation}</p>
+          <div className="action-check">
+            <CheckCircle2 size={18} /> {selected.risk_level === "Critical" ? "Escalate to the shift safety officer now." : "Keep monitoring; act if the status changes."}
+          </div>
+          <button className="button primary full" onClick={exportReport}>
+            <Download size={17} /> Download safety report
+          </button>
+          <small className="report-note">Downloads a report for {selected.zone_name}, including its current readings and recommended action.</small>
+        </article>
+      </section>
+
+      <section className="timeline-card">
+        <div>
+          <span className="section-kicker">What happened over time?</span>
+          <h2>Safety trend for {selected.zone_name}</h2>
+          <p>The orange line is safety score: when it falls, the zone is becoming less safe. The other lines show the risk signals that caused it.</p>
+        </div>
+        {timeline && timeline.length > 0 ? (
+          <ResponsiveContainer width="100%" height={310}>
+            <LineChart data={timeline}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--grid)" />
+              <XAxis dataKey="step" stroke="var(--muted)" />
+              <YAxis domain={[0, 100]} stroke="var(--muted)" />
+              <Tooltip contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12 }} />
+              <Legend />
+              <Line type="monotone" name="Safety score" dataKey="safety_score" stroke="var(--accent)" strokeWidth={3} dot={false} />
+              <Line type="monotone" name="Gas risk" dataKey="gas" stroke="#ff7760" strokeWidth={2} dot={false} />
+              <Line type="monotone" name="Equipment risk" dataKey="equipment" stroke="#b79aff" strokeWidth={2} dot={false} />
+              <Line type="monotone" name="Worker exposure" dataKey="workers" stroke="#41c9c3" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <p className="empty-state">The timeline will appear here once the live data is available.</p>
+        )}
+      </section>
+    </main>
+  );
 }
+
 
 function Monitor({ zones, selected, selectedId, setSelectedId, criticalZone, averageScore, factors, timeline, playing, startScenario, simulationStep, advance, reset, alarmArmed, prepareEmergencyAlerts, exportReport, reportText }) {
   const stage = scenarioStages[simulationStep] || scenarioStages[0];
