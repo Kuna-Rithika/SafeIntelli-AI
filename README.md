@@ -10,6 +10,12 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
+The backend can use Groq for AI-powered explanations when `GROQ_API_KEY` is set.
+
+1. Copy `backend/.env.example` to `backend/.env`.
+2. Add your Groq API key as `GROQ_API_KEY`.
+3. If no key is present, the app falls back to deterministic demo explanations.
+
 The prototype works without an API key by using deterministic demo explanations.
 
 ## Run Frontend

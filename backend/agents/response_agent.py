@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from datetime import datetime
 from typing import Any
@@ -24,25 +25,26 @@ class ResponseAgent:
         return {**zone, **generated}
 
     def _try_llm(self, zone: dict[str, Any]) -> dict[str, Any] | None:
-        api_key = os.getenv("ANTHROPIC_API_KEY")
+        api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
             return None
 
         prompt = (
             "You are an industrial safety officer. Explain this compound risk in plain language and "
-            "recommend precise corrective actions. Return short JSON with explanation, recommendation, risk_reduction.\n"
+            "recommend precise corrective actions. Respond ONLY with valid JSON in this exact format, "
+            "no extra text, no markdown fences: "
+            '{"explanation": "...", "recommendation": "...", "risk_reduction": 80}\n'
             f"Zone data: {zone}"
         )
         try:
             response = requests.post(
-                "https://api.anthropic.com/v1/messages",
+                "https://api.groq.com/openai/v1/chat/completions",
                 headers={
-                    "x-api-key": api_key,
-                    "anthropic-version": "2023-06-01",
-                    "content-type": "application/json",
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
                 },
                 json={
-                    "model": "claude-3-5-sonnet-latest",
+                    "model": "llama-3.3-70b-versatile",
                     "max_tokens": 450,
                     "messages": [{"role": "user", "content": prompt}],
                 },
@@ -50,11 +52,20 @@ class ResponseAgent:
             )
             if response.status_code >= 400:
                 return None
-            text = response.json()["content"][0]["text"]
+
+            raw_text = response.json()["choices"][0]["message"]["content"]
+
+            # Strip accidental markdown fences if the model adds them
+            cleaned = raw_text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+
+            parsed = json.loads(cleaned)
             return {
-                "explanation": text,
-                "recommendation": "Review the generated explanation and apply the listed corrective controls immediately.",
-                "risk_reduction": 75,
+                "explanation": parsed.get("explanation", raw_text),
+                "recommendation": parsed.get(
+                    "recommendation",
+                    "Review the generated explanation and apply the listed corrective controls immediately.",
+                ),
+                "risk_reduction": parsed.get("risk_reduction", 75),
                 "incident_report": self._report(zone),
             }
         except Exception:

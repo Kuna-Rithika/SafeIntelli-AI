@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -7,6 +8,8 @@ from agents.correlation_scoring_agent import CorrelationScoringAgent
 from agents.response_agent import ResponseAgent
 from agents.sensor_fusion_agent import SensorFusionAgent
 from data.generate_synthetic_data import build_simulation
+
+load_dotenv()
 
 
 app = FastAPI(title="SafeIntelli AI API", version="1.0.0")
