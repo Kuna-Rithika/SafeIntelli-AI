@@ -26,9 +26,11 @@ app.add_middleware(
         "https://safe-intelli-ai.vercel.app",
         "https://safe-intelli-ai-git-main-kuna-rithikas-projects.vercel.app",
     ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+
 )
 
 DEMO_ZONES = ["B", "A", "F"]
